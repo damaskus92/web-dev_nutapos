@@ -8,7 +8,13 @@
           {{ isEdit ? 'Ubah Diskon' : 'Tambah Diskon' }}
         </span>
 
-        <v-btn icon variant="text" density="comfortable" @click="closeDialog">
+        <v-btn
+          icon
+          variant="text"
+          color="blue-grey-darken-4"
+          density="comfortable"
+          @click="closeDialog"
+        >
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -56,10 +62,21 @@
                     density="comfortable"
                     rounded="lg"
                     variant="outlined"
+                    color="success"
                     class="w-100"
                   >
-                    <v-btn value="percent">%</v-btn>
-                    <v-btn value="amount">Rp</v-btn>
+                    <v-btn value="percent" class="px-1">
+                      <div class="d-flex items-center ga-1">
+                        <check-icon v-if="form.type === 'percent'" size="16" />
+                        <span>%</span>
+                      </div>
+                    </v-btn>
+                    <v-btn value="amount" class="px-1">
+                      <div class="d-flex items-center ga-1">
+                        <check-icon v-if="form.type === 'amount'" size="16" />
+                        <span>Rp</span>
+                      </div>
+                    </v-btn>
                   </v-btn-toggle>
                 </v-col>
               </v-row>
@@ -80,7 +97,6 @@
                 </v-btn>
 
                 <v-btn
-                  color="primary"
                   :loading="loadingSubmit"
                   :disabled="isActionDisabled || !isValid"
                   @click="onSubmit"
@@ -93,7 +109,6 @@
               <v-btn
                 v-else
                 block
-                color="primary"
                 :loading="loadingSubmit"
                 :disabled="isActionDisabled || !isValid"
                 @click="onSubmit"
@@ -109,6 +124,7 @@
 </template>
 
 <script setup>
+import { CheckIcon } from 'lucide-vue-next'
 import { ref, reactive, computed, watch } from 'vue'
 
 /* Props */

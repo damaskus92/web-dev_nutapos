@@ -14,7 +14,7 @@ export default createVuetify({
       ripple: false,
     },
     VBtn: {
-      color: 'primary',
+      color: 'success',
       elevation: 0,
       style: {
         textTransform: 'none',

@@ -35,10 +35,9 @@
         </div>
       </v-card-title>
 
-      <!-- Table -->
       <v-card-text v-if="isFetched && discounts.length" class="d-flex flex-column flex-grow-1 mt-2">
         <!-- Search -->
-        <div class="d-flex mb-6">
+        <div class="d-flex mb-6 items-center ga-4">
           <v-text-field
             v-model="search"
             placeholder="Cari diskon"
@@ -47,8 +46,11 @@
             variant="outlined"
             hide-details
             clearable
+            class="rounded-search"
             style="max-width: 260px"
           />
+
+          <input-url-dropdown />
         </div>
 
         <!-- Data table -->
@@ -86,8 +88,14 @@
           </template>
 
           <template #item.actions="{ item }">
-            <v-btn icon size="small" variant="text" @click="openEditDialog(item)">
-              <v-icon icon="mdi-pencil" />
+            <v-btn
+              icon
+              size="small"
+              variant="text"
+              color="blue-grey-darken-4"
+              @click="openEditDialog(item)"
+            >
+              <pencil-line-icon size="16" />
             </v-btn>
           </template>
         </v-data-table>
@@ -151,6 +159,8 @@ import DiscountFormDialog from '@/components/DiscountFormDialog.vue'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import { discountService } from '@/services/discountService'
 import { useSnackbarStore } from '@/stores/snackbar'
+import InputUrlDropdown from '@/components/InputUrlDropdown.vue'
+import { PencilLineIcon } from 'lucide-vue-next'
 
 /* Store */
 const snackbar = useSnackbarStore()
