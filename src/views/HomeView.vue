@@ -230,6 +230,7 @@ async function handleSubmit(data) {
       await discountService.update(data._id, {
         ...data,
         discount_value: Number(data.discount_value),
+        created_at: editingDiscount.value.created_at,
         updated_at: now,
       })
       snackbar.success(`"${data.name}" berhasil disimpan.`)
