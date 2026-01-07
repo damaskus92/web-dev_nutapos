@@ -25,11 +25,11 @@
               <v-row align="center">
                 <v-col cols="8">
                   <v-text-field
-                    v-model="form.value"
+                    v-model="form.discount_value"
                     label="Diskon"
                     placeholder="0"
                     type="number"
-                    :rules="[rules.requiredValue, rules.minValue]"
+                    :rules="[rules.requiredDiscountValue, rules.minDiscountValue]"
                   >
                     <template #prepend-inner v-if="form.type === 'amount'">
                       <span>Rp</span>
@@ -102,19 +102,19 @@ const isValid = ref(false)
 
 const form = reactive({
   name: '',
-  value: null,
+  discount_value: null,
   type: 'percent',
 })
 
 const rules = {
   requiredName: (v) => !!v || 'Nama diskon tidak boleh kosong.',
-  requiredValue: (v) => (v !== null && v !== '') || 'Diskon tidak boleh kosong.',
-  minValue: (v) => v > 0 || 'Diskon tidak boleh "0".',
+  requiredDiscountValue: (v) => (v !== null && v !== '') || 'Diskon tidak boleh kosong.',
+  minDiscountValue: (v) => v > 0 || 'Diskon tidak boleh "0".',
 }
 
 function resetForm() {
   form.name = ''
-  form.value = null
+  form.discount_value = null
   form.type = 'percent'
   formRef.value?.resetValidation()
 }
@@ -130,7 +130,7 @@ function submit() {
 
   emit('submit', {
     name: form.name,
-    value: form.value,
+    discount_value: form.discount_value,
     type: form.type,
   })
 }
