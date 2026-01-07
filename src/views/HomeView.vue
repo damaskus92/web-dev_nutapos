@@ -10,14 +10,15 @@
         <div>
           <div class="text-h5 font-weight-semibold">Daftar Diskon</div>
 
-          <div v-if="discounts && discounts.length > 0" class="text-body-1 text-medium-emphasis">
+          <div v-if="discounts.length" class="text-body-1 text-medium-emphasis">
             Total jumlah diskon: {{ discounts.length }}
           </div>
         </div>
 
-        <div class="d-flex items-center ga-2">
+        <div class="d-flex align-center ga-2">
+          <!-- Tambah -->
           <v-btn
-            v-if="!hasSelection && discounts.length > 0"
+            v-if="!hasSelection && discounts.length"
             prepend-icon="mdi-plus"
             @click="openCreateDialog"
           >
@@ -25,21 +26,18 @@
           </v-btn>
 
           <!-- Batalkan selection -->
-          <v-btn v-if="hasSelection" color="error" variant="outlined" @click="selected = []">
+          <v-btn v-if="hasSelection" color="error" variant="outlined" @click="clearSelection">
             Batalkan
           </v-btn>
 
-          <!-- Hapus -->
-          <v-btn v-if="hasSelection" color="error"> Hapus </v-btn>
+          <!-- Hapus bulk -->
+          <v-btn v-if="hasSelection" color="error" @click="openBulkDelete"> Hapus </v-btn>
         </div>
       </v-card-title>
 
       <!-- Table -->
-      <v-card-text
-        v-if="isFetched && discounts.length > 0"
-        class="d-flex flex-column flex-grow-1 mt-2"
-      >
-        <!-- Table Action -->
+      <v-card-text v-if="isFetched && discounts.length" class="d-flex flex-column flex-grow-1 mt-2">
+        <!-- Search -->
         <div class="d-flex mb-6">
           <v-text-field
             v-model="search"
@@ -53,7 +51,7 @@
           />
         </div>
 
-        <!-- Table -->
+        <!-- Data table -->
         <v-data-table
           v-model="selected"
           show-select
@@ -62,55 +60,51 @@
           item-value="_id"
           class="flex-grow-1 table-discount"
         >
-          <template v-slot:loading>
+          <template #loading>
             <v-skeleton-loader type="table-row@10" />
           </template>
 
-          <template v-slot:item.name="{ item }">
+          <template #item.name="{ item }">
             <div class="d-flex align-center ga-2">
               <span>{{ item.name }}</span>
 
               <v-chip
                 v-if="item._id === newestDiscountId"
-                variant="outlined"
                 size="small"
-                class="rounded-pill font-weight-semibold bg-blue-lighten-5 py-0"
+                variant="outlined"
                 color="info"
+                class="rounded-pill font-weight-semibold bg-blue-lighten-5 py-0"
               >
                 baru
               </v-chip>
             </div>
           </template>
 
-          <template v-slot:item.actions="{ item }">
-            <v-btn icon size="small" variant="text" color="default" @click="openEditDialog(item)">
-              <v-icon icon="mdi-pencil" />
-            </v-btn>
-          </template>
-
-          <template v-slot:item.discount_value="{ item }">
+          <template #item.discount_value="{ item }">
             <span v-if="item.type === 'amount'"> Rp {{ formatRupiah(item.discount_value) }} </span>
             <span v-else> {{ item.discount_value }}% </span>
+          </template>
+
+          <template #item.actions="{ item }">
+            <v-btn icon size="small" variant="text" @click="openEditDialog(item)">
+              <v-icon icon="mdi-pencil" />
+            </v-btn>
           </template>
         </v-data-table>
       </v-card-text>
 
-      <!-- Empty State -->
+      <!-- Empty state -->
       <v-sheet
-        v-else-if="isFetched && discounts.length === 0"
+        v-else-if="isFetched"
         border
         class="flex-grow-1 ma-4 d-flex align-center justify-center pa-4"
         style="border-radius: 12px"
       >
-        <div
-          class="d-flex flex-column align-center ga-5 text-center"
-          style="width: 100%; max-width: 420px"
-        >
+        <div class="d-flex flex-column align-center ga-5 text-center" style="max-width: 420px">
           <v-img
             src="/images/il_empty_state_discount_not_available.png"
             max-height="135"
             max-width="240"
-            width="100%"
             contain
           />
 
@@ -123,149 +117,172 @@
         </div>
       </v-sheet>
 
+      <!-- Loading -->
       <v-card-text v-else class="d-flex align-center justify-center flex-grow-1">
         <v-progress-circular indeterminate />
       </v-card-text>
     </v-card>
 
-    <!-- Dialog -->
+    <!-- Dialog form -->
     <discount-form-dialog
       v-model="dialog"
-      :loading="loading"
       :mode="dialogMode"
       :initial-data="editingDiscount"
+      :loading-submit="loadingSubmit"
+      :loading-delete="loadingDelete"
       @submit="handleSubmit"
+      @delete="openSingleDelete"
     />
   </div>
+
+  <!-- Dialog konfirmasi hapus -->
+  <confirm-delete-dialog
+    v-model="confirmDialog"
+    :item="itemsToDelete[0]"
+    :loading="loadingDelete"
+    @confirm="handleConfirmDelete"
+  />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import DiscountFormDialog from '@/components/DiscountFormDialog.vue'
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import { discountService } from '@/services/discountService'
 import { useSnackbarStore } from '@/stores/snackbar'
 
-// store
+/* Store */
 const snackbar = useSnackbarStore()
 
-// state
+/* Dialog & loading state */
 const dialog = ref(false)
 const dialogMode = ref('create')
-const loading = ref(false)
-const loadingList = ref(false)
+const confirmDialog = ref(false)
+
+const loadingSubmit = ref(false)
+const loadingDelete = ref(false)
 const isFetched = ref(false)
 
+/* Data */
 const discounts = ref([])
 const selected = ref([])
 const search = ref('')
-
 const editingDiscount = ref(null)
+const itemsToDelete = ref([])
 
-// table config
+/* Computed */
+const hasSelection = computed(() => selected.value.length > 0)
+
 const headers = [
   { title: 'Nama Diskon', key: 'name' },
   { title: 'Nilai Diskon', key: 'discount_value' },
   { title: '', key: 'actions', sortable: false },
 ]
 
-const hasSelection = computed(() => selected.value.length > 0)
+const sortedDiscounts = computed(() =>
+  [...discounts.value].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+)
 
-// urutkan dari data terbaru
-const sortedDiscounts = computed(() => {
-  return [...discounts.value].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-})
+const newestDiscountId = computed(() => sortedDiscounts.value[0]?._id ?? null)
 
-// id diskon terbaru
-const newestDiscountId = computed(() => {
-  return sortedDiscounts.value.length ? sortedDiscounts.value[0]._id : null
-})
-
-// filter pencarian
 const filteredDiscounts = computed(() => {
   if (!search.value) return sortedDiscounts.value
 
   const keyword = search.value.toLowerCase()
-
   return sortedDiscounts.value.filter((item) => item.name.toLowerCase().includes(keyword))
 })
 
-// fetch data
+/* Fetch data */
 async function fetchDiscounts() {
-  loadingList.value = true
   isFetched.value = false
-
   try {
     const res = await discountService.getAll()
     discounts.value = res.data
-  } catch (error) {
-    console.error(error)
+  } catch {
     snackbar.error('Gagal memuat data.')
   } finally {
-    loadingList.value = false
     isFetched.value = true
   }
 }
 
-// create discount
+/* Dialog handlers */
 function openCreateDialog() {
   dialogMode.value = 'create'
   editingDiscount.value = null
   dialog.value = true
 }
 
-// edit discount
 function openEditDialog(item) {
   dialogMode.value = 'edit'
   editingDiscount.value = item
   dialog.value = true
 }
 
-// submit form
+/* Submit */
 async function handleSubmit(data) {
-  loading.value = true
+  loadingSubmit.value = true
 
   try {
     const now = new Date().toISOString()
 
-    if (dialogMode.value === 'edit' && data._id) {
-      // UPDATE
+    if (dialogMode.value === 'edit') {
       await discountService.update(data._id, {
-        name: data.name,
+        ...data,
         discount_value: Number(data.discount_value),
-        type: data.type,
         updated_at: now,
       })
-
       snackbar.success(`"${data.name}" berhasil disimpan.`)
     } else {
-      // CREATE
       await discountService.create({
-        name: data.name,
+        ...data,
         discount_value: Number(data.discount_value),
-        type: data.type,
         created_at: now,
         updated_at: now,
       })
-
       snackbar.success(`"${data.name}" berhasil ditambahkan.`)
     }
 
     dialog.value = false
-    dialogMode.value = 'create'
-    editingDiscount.value = null
-
     await fetchDiscounts()
-  } catch (error) {
-    console.error(error)
-
-    const action = dialogMode.value === 'edit' ? 'memperbarui' : 'menyimpan'
-    snackbar.error(`Gagal ${action} "${data.name}".`)
+  } catch {
+    snackbar.error('Gagal menyimpan data.')
   } finally {
-    loading.value = false
+    loadingSubmit.value = false
   }
 }
 
-// helpers
+/* Delete */
+function openSingleDelete(item) {
+  itemsToDelete.value = [item]
+  confirmDialog.value = true
+}
+
+function openBulkDelete() {
+  itemsToDelete.value = [...selected.value]
+  confirmDialog.value = true
+}
+
+async function handleConfirmDelete(item) {
+  loadingDelete.value = true
+
+  try {
+    await discountService.delete(item._id)
+    snackbar.success(`"${item.name}" berhasil dihapus.`)
+
+    confirmDialog.value = false
+    dialog.value = false
+    selected.value = []
+    await fetchDiscounts()
+  } finally {
+    loadingDelete.value = false
+  }
+}
+
+/* Helpers */
+function clearSelection() {
+  selected.value = []
+}
+
 function formatRupiah(value) {
   return new Intl.NumberFormat('id-ID').format(value)
 }

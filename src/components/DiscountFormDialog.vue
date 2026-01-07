@@ -1,19 +1,23 @@
 <template>
+  <!-- Dialog form diskon -->
   <v-dialog v-model="model" max-width="480" persistent>
     <v-card rounded="xl">
+      <!-- Header -->
       <v-card-title class="d-flex align-center justify-space-between px-6 pt-4">
         <span class="text-h5 font-weight-semibold">
           {{ isEdit ? 'Ubah Diskon' : 'Tambah Diskon' }}
         </span>
 
-        <v-btn icon variant="text" density="comfortable" @click="close">
+        <v-btn icon variant="text" density="comfortable" @click="closeDialog">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
 
+      <!-- Body -->
       <v-card-text>
         <v-form ref="formRef" v-model="isValid">
           <v-row>
+            <!-- Nama diskon -->
             <v-col cols="12">
               <v-text-field
                 v-model="form.name"
@@ -23,6 +27,7 @@
               />
             </v-col>
 
+            <!-- Nilai diskon -->
             <v-col cols="12">
               <v-row align="center">
                 <v-col cols="8">
@@ -43,6 +48,7 @@
                   </v-text-field>
                 </v-col>
 
+                <!-- Tipe diskon -->
                 <v-col cols="4" style="margin-top: -22px">
                   <v-btn-toggle
                     v-model="form.type"
@@ -59,16 +65,40 @@
               </v-row>
             </v-col>
 
+            <!-- Aksi -->
             <v-col cols="12">
+              <!-- Mode edit -->
+              <div v-if="isEdit" class="d-flex justify-space-between align-center">
+                <v-btn
+                  color="error"
+                  variant="outlined"
+                  :loading="loadingDelete"
+                  :disabled="isActionDisabled"
+                  @click="onDelete"
+                >
+                  Hapus
+                </v-btn>
+
+                <v-btn
+                  color="primary"
+                  :loading="loadingSubmit"
+                  :disabled="isActionDisabled || !isValid"
+                  @click="onSubmit"
+                >
+                  Simpan
+                </v-btn>
+              </div>
+
+              <!-- Mode create -->
               <v-btn
+                v-else
                 block
                 color="primary"
-                :loading="loading"
-                :disabled="loading || !isValid"
-                @click="submit"
+                :loading="loadingSubmit"
+                :disabled="isActionDisabled || !isValid"
+                @click="onSubmit"
               >
-                <template v-if="loading">Menyimpan...</template>
-                <template v-else>Simpan</template>
+                Simpan
               </v-btn>
             </v-col>
           </v-row>
@@ -81,34 +111,31 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 
+/* Props */
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    required: true,
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  mode: {
-    type: String,
-    default: 'create',
-  },
-  initialData: {
-    type: Object,
-    default: null,
-  },
+  modelValue: Boolean,
+  loadingSubmit: Boolean,
+  loadingDelete: Boolean,
+  mode: String, // create | edit
+  initialData: Object,
 })
 
-const emit = defineEmits(['update:modelValue', 'submit'])
+/* Emits */
+const emit = defineEmits(['update:modelValue', 'submit', 'delete'])
 
+/* v-model dialog */
 const model = computed({
   get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v),
+  set: (value) => emit('update:modelValue', value),
 })
 
+/* Mode */
 const isEdit = computed(() => props.mode === 'edit')
 
+/* Disable state */
+const isActionDisabled = computed(() => props.loadingSubmit || props.loadingDelete)
+
+/* Form */
 const formRef = ref(null)
 const isValid = ref(false)
 
@@ -118,16 +145,18 @@ const form = reactive({
   type: 'percent',
 })
 
+/* Validation rules */
 const rules = {
   requiredName: (v) => !!v || 'Nama diskon tidak boleh kosong.',
   requiredDiscountValue: (v) => (v !== null && v !== '') || 'Diskon tidak boleh kosong.',
   minDiscountValue: (v) => v > 0 || 'Diskon tidak boleh "0".',
 }
 
+/* Sync data saat dialog dibuka */
 watch(
   () => props.modelValue,
   (open) => {
-    if (open && props.mode === 'edit' && props.initialData) {
+    if (open && isEdit.value && props.initialData) {
       form.name = props.initialData.name
       form.discount_value = props.initialData.discount_value
       form.type = props.initialData.type
@@ -139,6 +168,7 @@ watch(
   },
 )
 
+/* Reset form */
 function resetForm() {
   form.name = ''
   form.discount_value = null
@@ -146,13 +176,15 @@ function resetForm() {
   formRef.value?.resetValidation()
 }
 
-function close() {
-  if (props.loading) return
+/* Close dialog */
+function closeDialog() {
+  if (isActionDisabled.value) return
   model.value = false
   resetForm()
 }
 
-function submit() {
+/* Submit form */
+function onSubmit() {
   if (!formRef.value.validate()) return
 
   const payload = {
@@ -161,10 +193,15 @@ function submit() {
     type: form.type,
   }
 
-  if (props.mode === 'edit' && props.initialData?._id) {
+  if (isEdit.value && props.initialData?._id) {
     payload._id = props.initialData._id
   }
 
   emit('submit', payload)
+}
+
+/* Delete data */
+function onDelete() {
+  emit('delete', props.initialData)
 }
 </script>
