@@ -19,7 +19,7 @@
           <v-btn
             v-if="!hasSelection && discounts.length > 0"
             prepend-icon="mdi-plus"
-            @click="dialog = true"
+            @click="openCreateDialog"
           >
             Tambah diskon
           </v-btn>
@@ -82,6 +82,12 @@
             </div>
           </template>
 
+          <template v-slot:item.actions="{ item }">
+            <v-btn icon size="small" variant="text" color="default" @click="openEditDialog(item)">
+              <v-icon icon="mdi-pencil" />
+            </v-btn>
+          </template>
+
           <template v-slot:item.discount_value="{ item }">
             <span v-if="item.type === 'amount'"> Rp {{ formatRupiah(item.discount_value) }} </span>
             <span v-else> {{ item.discount_value }}% </span>
@@ -113,7 +119,7 @@
             <p>Silahkan tambah diskon untuk menarik pelanggan dan meningkatkan penjualan.</p>
           </div>
 
-          <v-btn prepend-icon="mdi-plus" @click="dialog = true"> Tambah diskon </v-btn>
+          <v-btn prepend-icon="mdi-plus" @click="openCreateDialog"> Tambah diskon </v-btn>
         </div>
       </v-sheet>
 
@@ -123,7 +129,13 @@
     </v-card>
 
     <!-- Dialog -->
-    <discount-form-dialog v-model="dialog" :loading="loading" @submit="handleSubmit" />
+    <discount-form-dialog
+      v-model="dialog"
+      :loading="loading"
+      :mode="dialogMode"
+      :initial-data="editingDiscount"
+      @submit="handleSubmit"
+    />
   </div>
 </template>
 
@@ -138,6 +150,7 @@ const snackbar = useSnackbarStore()
 
 // state
 const dialog = ref(false)
+const dialogMode = ref('create')
 const loading = ref(false)
 const loadingList = ref(false)
 const isFetched = ref(false)
@@ -146,13 +159,15 @@ const discounts = ref([])
 const selected = ref([])
 const search = ref('')
 
+const editingDiscount = ref(null)
+
 // table config
 const headers = [
   { title: 'Nama Diskon', key: 'name' },
   { title: 'Nilai Diskon', key: 'discount_value' },
+  { title: '', key: 'actions', sortable: false },
 ]
 
-// computed
 const hasSelection = computed(() => selected.value.length > 0)
 
 // urutkan dari data terbaru
@@ -165,7 +180,7 @@ const newestDiscountId = computed(() => {
   return sortedDiscounts.value.length ? sortedDiscounts.value[0]._id : null
 })
 
-// filter
+// filter pencarian
 const filteredDiscounts = computed(() => {
   if (!search.value) return sortedDiscounts.value
 
@@ -192,27 +207,59 @@ async function fetchDiscounts() {
 }
 
 // create discount
+function openCreateDialog() {
+  dialogMode.value = 'create'
+  editingDiscount.value = null
+  dialog.value = true
+}
+
+// edit discount
+function openEditDialog(item) {
+  dialogMode.value = 'edit'
+  editingDiscount.value = item
+  dialog.value = true
+}
+
+// submit form
 async function handleSubmit(data) {
   loading.value = true
 
   try {
     const now = new Date().toISOString()
 
-    await discountService.create({
-      name: data.name,
-      discount_value: Number(data.discount_value),
-      type: data.type,
-      created_at: now,
-      updated_at: now,
-    })
+    if (dialogMode.value === 'edit' && data._id) {
+      // UPDATE
+      await discountService.update(data._id, {
+        name: data.name,
+        discount_value: Number(data.discount_value),
+        type: data.type,
+        updated_at: now,
+      })
 
-    snackbar.success(`"${data.name}" berhasil ditambahkan.`)
+      snackbar.success(`"${data.name}" berhasil disimpan.`)
+    } else {
+      // CREATE
+      await discountService.create({
+        name: data.name,
+        discount_value: Number(data.discount_value),
+        type: data.type,
+        created_at: now,
+        updated_at: now,
+      })
+
+      snackbar.success(`"${data.name}" berhasil ditambahkan.`)
+    }
+
     dialog.value = false
+    dialogMode.value = 'create'
+    editingDiscount.value = null
 
     await fetchDiscounts()
   } catch (error) {
     console.error(error)
-    snackbar.error(`Gagal menyimpan "${data.name}".`)
+
+    const action = dialogMode.value === 'edit' ? 'memperbarui' : 'menyimpan'
+    snackbar.error(`Gagal ${action} "${data.name}".`)
   } finally {
     loading.value = false
   }
@@ -245,5 +292,11 @@ onMounted(fetchDiscounts)
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.table-discount :deep(td:last-child),
+.table-discount :deep(th:last-child) {
+  width: 48px;
+  text-align: center;
 }
 </style>

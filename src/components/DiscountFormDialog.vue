@@ -2,7 +2,9 @@
   <v-dialog v-model="model" max-width="480" persistent>
     <v-card rounded="xl">
       <v-card-title class="d-flex align-center justify-space-between px-6 pt-4">
-        <span class="text-h5 font-weight-semibold">Tambah Diskon</span>
+        <span class="text-h5 font-weight-semibold">
+          {{ isEdit ? 'Ubah Diskon' : 'Tambah Diskon' }}
+        </span>
 
         <v-btn icon variant="text" density="comfortable" @click="close">
           <v-icon>mdi-close</v-icon>
@@ -77,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -88,6 +90,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  mode: {
+    type: String,
+    default: 'create',
+  },
+  initialData: {
+    type: Object,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['update:modelValue', 'submit'])
@@ -96,6 +106,8 @@ const model = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
+
+const isEdit = computed(() => props.mode === 'edit')
 
 const formRef = ref(null)
 const isValid = ref(false)
@@ -111,6 +123,21 @@ const rules = {
   requiredDiscountValue: (v) => (v !== null && v !== '') || 'Diskon tidak boleh kosong.',
   minDiscountValue: (v) => v > 0 || 'Diskon tidak boleh "0".',
 }
+
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (open && props.mode === 'edit' && props.initialData) {
+      form.name = props.initialData.name
+      form.discount_value = props.initialData.discount_value
+      form.type = props.initialData.type
+    }
+
+    if (!open && props.mode === 'create') {
+      resetForm()
+    }
+  },
+)
 
 function resetForm() {
   form.name = ''
@@ -128,10 +155,16 @@ function close() {
 function submit() {
   if (!formRef.value.validate()) return
 
-  emit('submit', {
+  const payload = {
     name: form.name,
     discount_value: form.discount_value,
     type: form.type,
-  })
+  }
+
+  if (props.mode === 'edit' && props.initialData?._id) {
+    payload._id = props.initialData._id
+  }
+
+  emit('submit', payload)
 }
 </script>
