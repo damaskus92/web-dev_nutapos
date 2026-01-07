@@ -35,6 +35,12 @@
         </div>
       </v-card-title>
 
+      <v-card-text v-if="!isFetched || discounts.length === 0" class="mt-2 flex-grow-0">
+        <div class="d-flex justify-start">
+          <input-api-key @api-key-applied="fetchDiscounts" />
+        </div>
+      </v-card-text>
+
       <v-card-text v-if="isFetched && discounts.length" class="d-flex flex-column flex-grow-1 mt-2">
         <!-- Search -->
         <div class="d-flex mb-6 items-center ga-4">
@@ -50,7 +56,7 @@
             style="max-width: 260px"
           />
 
-          <input-url-dropdown />
+          <input-api-key @api-key-applied="fetchDiscounts" />
         </div>
 
         <!-- Data table -->
@@ -113,6 +119,7 @@
             src="/images/il_empty_state_discount_not_available.png"
             max-height="135"
             max-width="240"
+            width="100%"
             contain
           />
 
@@ -159,8 +166,9 @@ import DiscountFormDialog from '@/components/DiscountFormDialog.vue'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import { discountService } from '@/services/discountService'
 import { useSnackbarStore } from '@/stores/snackbar'
-import InputUrlDropdown from '@/components/InputUrlDropdown.vue'
 import { PencilLineIcon } from 'lucide-vue-next'
+import InputApiKey from '@/components/InputApiKey.vue'
+import { getApiKey, isApiKeyAvailable } from '@/utils/apiKey'
 
 /* Store */
 const snackbar = useSnackbarStore()
@@ -204,8 +212,17 @@ const filteredDiscounts = computed(() => {
 })
 
 /* Fetch data */
-async function fetchDiscounts() {
+async function fetchDiscounts(newApiKey) {
   isFetched.value = false
+
+  const key = newApiKey || getApiKey()
+
+  if (!key) {
+    snackbar.error('API Key belum diset. Silahkan masukkan API Key terlebih dahulu.')
+    isFetched.value = true
+    return
+  }
+
   try {
     const res = await discountService.getAll()
     discounts.value = res.data

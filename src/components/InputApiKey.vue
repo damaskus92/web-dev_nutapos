@@ -19,15 +19,19 @@
         <v-list>
           <v-list-item>
             <v-text-field
-              label="API URL crudcrud.com"
-              placeholder="https://crudcrud.com/api/.../diskon"
+              v-model="apiKey"
+              label="API Key crudcrud.com"
+              placeholder="Masukkan API Key crudcrud.com"
+              hide-details
               outlined
               class="mt-2"
             />
           </v-list-item>
           <v-list-item>
-            <div class="d-flex justify-end w-100">
-              <v-btn color="success" class="px-8">Terapkan</v-btn>
+            <div class="d-flex justify-end w-100 ga-3">
+              <v-btn color="success" class="px-8" :disabled="!apiKey.trim()" @click="applyApiKey">
+                Terapkan
+              </v-btn>
             </div>
           </v-list-item>
         </v-list>
@@ -37,10 +41,32 @@
 </template>
 
 <script setup>
+import { useSnackbarStore } from '@/stores/snackbar'
+import { getApiKey, setApiKey } from '@/utils/apiKey'
 import { ChevronDownIcon, StoreIcon } from 'lucide-vue-next'
 import { ref } from 'vue'
 
+const emit = defineEmits(['api-key-applied'])
+
+const snackbar = useSnackbarStore()
+
 const menu = ref(false)
+const apiKey = ref(getApiKey() || '')
+
+const applyApiKey = () => {
+  const trimmedKey = apiKey.value.trim()
+
+  if (!trimmedKey) {
+    snackbar.error('API Key tidak boleh kosong!')
+    return
+  }
+
+  setApiKey(trimmedKey)
+  menu.value = false
+  snackbar.success('API Key berhasil disimpan!')
+
+  emit('api-key-applied', trimmedKey)
+}
 </script>
 
 <style scoped>
