@@ -1,0 +1,8 @@
+import axios from 'axios'
+
+export const crudcrud = axios.create({
+  baseURL: `https://crudcrud.com/api/${import.meta.env.VITE_CRUDCRUD_KEY}`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})

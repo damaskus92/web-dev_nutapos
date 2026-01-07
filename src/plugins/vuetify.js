@@ -8,4 +8,19 @@ export default createVuetify({
   theme: {
     defaultTheme: 'light',
   },
+  defaults: {
+    global: {
+      ripple: false,
+    },
+    VBtn: {
+      color: 'primary',
+      elevation: 0,
+      style: {
+        textTransform: 'none',
+        letterSpacing: 'normal',
+        fontWeight: 600,
+        height: '40px',
+      },
+    },
+  },
 })
