@@ -152,28 +152,14 @@ const rules = {
   minDiscountValue: (v) => v > 0 || 'Diskon tidak boleh "0".',
 }
 
-/* Sync data saat dialog dibuka */
-watch(
-  () => props.modelValue,
-  (open) => {
-    if (open && isEdit.value && props.initialData) {
-      form.name = props.initialData.name
-      form.discount_value = props.initialData.discount_value
-      form.type = props.initialData.type
-    }
-
-    if (!open && props.mode === 'create') {
-      resetForm()
-    }
-  },
-)
-
 /* Reset form */
 function resetForm() {
   form.name = ''
   form.discount_value = null
   form.type = 'percent'
-  formRef.value?.resetValidation()
+  if (formRef.value) {
+    formRef.value.resetValidation()
+  }
 }
 
 /* Close dialog */
@@ -183,21 +169,40 @@ function closeDialog() {
   resetForm()
 }
 
+/* Sync data saat dialog dibuka di mode edit */
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (open) {
+      if (isEdit.value && props.initialData) {
+        form.name = props.initialData.name || ''
+        form.discount_value = props.initialData.discount_value ?? null
+        form.type = props.initialData.type || 'percent'
+      } else {
+        resetForm()
+      }
+    }
+  },
+  { immediate: true }, // agar langsung cek saat komponen dimount
+)
+
 /* Submit form */
 function onSubmit() {
-  if (!formRef.value.validate()) return
+  formRef.value?.validate().then((valid) => {
+    if (!valid) return
 
-  const payload = {
-    name: form.name,
-    discount_value: form.discount_value,
-    type: form.type,
-  }
+    const payload = {
+      name: form.name,
+      discount_value: Number(form.discount_value),
+      type: form.type,
+    }
 
-  if (isEdit.value && props.initialData?._id) {
-    payload._id = props.initialData._id
-  }
+    if (isEdit.value && props.initialData?._id) {
+      payload._id = props.initialData._id
+    }
 
-  emit('submit', payload)
+    emit('submit', payload)
+  })
 }
 
 /* Delete data */

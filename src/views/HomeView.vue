@@ -31,7 +31,7 @@
           </v-btn>
 
           <!-- Hapus bulk -->
-          <v-btn v-if="hasSelection" color="error" @click="openBulkDelete"> Hapus </v-btn>
+          <v-btn v-if="hasSelection" color="error" @click="openBulkDeleteDialog"> Hapus </v-btn>
         </div>
       </v-card-title>
 
@@ -131,14 +131,14 @@
       :loading-submit="loadingSubmit"
       :loading-delete="loadingDelete"
       @submit="handleSubmit"
-      @delete="openSingleDelete"
+      @delete="openSingleDeleteDialog"
     />
   </div>
 
   <!-- Dialog konfirmasi hapus -->
   <confirm-delete-dialog
     v-model="confirmDialog"
-    :item="itemsToDelete[0]"
+    :items="itemsToDelete"
     :loading="loadingDelete"
     @confirm="handleConfirmDelete"
   />
@@ -252,27 +252,52 @@ async function handleSubmit(data) {
 }
 
 /* Delete */
-function openSingleDelete(item) {
+function openSingleDeleteDialog(item) {
   itemsToDelete.value = [item]
   confirmDialog.value = true
 }
 
-function openBulkDelete() {
+function openBulkDeleteDialog() {
   itemsToDelete.value = [...selected.value]
   confirmDialog.value = true
 }
 
-async function handleConfirmDelete(item) {
+async function handleConfirmDelete(items) {
+  if (items.length === 0) return
+
+  console.log(items)
+
   loadingDelete.value = true
 
   try {
-    await discountService.delete(item._id)
-    snackbar.success(`"${item.name}" berhasil dihapus.`)
+    // Ekstrak ID dari items (bisa string atau object)
+    const ids = items.map((item) => (typeof item === 'string' ? item : item._id))
 
+    // Hapus satu per satu
+    await Promise.all(ids.map((id) => discountService.delete(id)))
+
+    if (items.length === 1) {
+      // Ambil nama jika tersedia (object), jika tidak gunakan pesan default
+      const name = typeof items[0] === 'object' && items[0].name ? items[0].name : null
+
+      if (name) {
+        snackbar.success(`"${name}" berhasil dihapus.`)
+      } else {
+        snackbar.success('1 diskon berhasil dihapus.')
+      }
+    } else {
+      snackbar.success(`${items.length} diskon berhasil dihapus.`)
+    }
+
+    // Reset state
     confirmDialog.value = false
     dialog.value = false
     selected.value = []
+
     await fetchDiscounts()
+  } catch (error) {
+    console.error(error)
+    snackbar.error('Gagal menghapus diskon.')
   } finally {
     loadingDelete.value = false
   }

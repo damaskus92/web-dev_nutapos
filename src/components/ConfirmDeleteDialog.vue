@@ -7,7 +7,10 @@
 
       <!-- Konten dialog -->
       <v-card-text>
-        <p>Apakah Anda yakin ingin menghapus diskon "{{ item?.name }}"?</p>
+        <p v-if="items.length === 1 && items[0]?.name">
+          Apakah Anda yakin ingin menghapus diskon "{{ items[0]?.name }}"?
+        </p>
+        <p v-else>Apakah Anda yakin ingin menghapus diskon yang dipilih?</p>
 
         <div class="d-flex items-center ga-2 mt-2">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
@@ -76,9 +79,9 @@ import { computed } from 'vue'
 /* Props */
 const props = defineProps({
   modelValue: Boolean,
-  item: {
-    type: Object,
-    default: null,
+  items: {
+    type: Array,
+    default: () => [],
   },
   loading: Boolean,
 })
@@ -94,7 +97,8 @@ const model = computed({
 
 /* Handle konfirmasi hapus */
 function onConfirm() {
-  if (!props.item) return
-  emit('confirm', props.item)
+  if (props.items.length === 0) return
+
+  emit('confirm', props.items)
 }
 </script>
