@@ -130,6 +130,7 @@
       :initial-data="editingDiscount"
       :loading-submit="loadingSubmit"
       :loading-delete="loadingDelete"
+      :discounts="discounts"
       @submit="handleSubmit"
       @delete="openSingleDeleteDialog"
     />

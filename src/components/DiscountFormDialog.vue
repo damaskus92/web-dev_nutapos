@@ -23,7 +23,7 @@
                 v-model="form.name"
                 label="Nama Diskon"
                 placeholder="Misal: Diskon opening, diskon akhir tahun"
-                :rules="[rules.requiredName]"
+                :rules="[rules.requiredName, rules.uniqueName]"
               />
             </v-col>
 
@@ -118,6 +118,11 @@ const props = defineProps({
   loadingDelete: Boolean,
   mode: String, // create | edit
   initialData: Object,
+  discounts: {
+    type: Array,
+    required: false,
+    default: () => [],
+  },
 })
 
 /* Emits */
@@ -148,6 +153,24 @@ const form = reactive({
 /* Validation rules */
 const rules = {
   requiredName: (v) => !!v || 'Nama diskon tidak boleh kosong.',
+  uniqueName: (v) => {
+    if (!v) return true
+    const trimmed = v.trim().toLowerCase()
+
+    const duplicate = props.discounts.find((item) => {
+      if (!item.name) return false
+      const itemName = item.name.trim().toLowerCase()
+
+      // Jika sedang edit dan _id sama → boleh pakai nama yang sama
+      if (isEdit.value && props.initialData?._id && item._id === props.initialData._id) {
+        return false
+      }
+
+      return itemName === trimmed
+    })
+
+    return !duplicate || 'Nama diskon sudah digunakan, silahkan gunakan nama lain.'
+  },
   requiredDiscountValue: (v) => (v !== null && v !== '') || 'Diskon tidak boleh kosong.',
   minDiscountValue: (v) => v > 0 || 'Diskon tidak boleh "0".',
 }
