@@ -168,7 +168,7 @@ import { discountService } from '@/services/discountService'
 import { useSnackbarStore } from '@/stores/snackbar'
 import { PencilLineIcon } from 'lucide-vue-next'
 import InputApiKey from '@/components/InputApiKey.vue'
-import { getApiKey, isApiKeyAvailable } from '@/utils/apiKey'
+import { isApiKeyAvailable, setApiKey } from '@/utils/apiKey'
 
 /* Store */
 const snackbar = useSnackbarStore()
@@ -215,9 +215,13 @@ const filteredDiscounts = computed(() => {
 async function fetchDiscounts(newApiKey) {
   isFetched.value = false
 
-  const key = newApiKey || getApiKey()
+  // Jika ada API key baru dari input
+  if (newApiKey) {
+    setApiKey(newApiKey)
+  }
 
-  if (!key) {
+  // Pengecekan API Key
+  if (!isApiKeyAvailable()) {
     snackbar.error('API Key belum diset. Silahkan masukkan API Key terlebih dahulu.')
     isFetched.value = true
     return
@@ -226,7 +230,8 @@ async function fetchDiscounts(newApiKey) {
   try {
     const res = await discountService.getAll()
     discounts.value = res.data
-  } catch {
+  } catch (error) {
+    console.error(error)
     snackbar.error('Gagal memuat data.')
   } finally {
     isFetched.value = true
@@ -235,12 +240,22 @@ async function fetchDiscounts(newApiKey) {
 
 /* Dialog handlers */
 function openCreateDialog() {
+  if (!isApiKeyAvailable()) {
+    snackbar.error('Silahkan masukkan API Key terlebih dahulu.')
+    return
+  }
+
   dialogMode.value = 'create'
   editingDiscount.value = null
   dialog.value = true
 }
 
 function openEditDialog(item) {
+  if (!isApiKeyAvailable()) {
+    snackbar.error('Silahkan masukkan API Key terlebih dahulu.')
+    return
+  }
+
   dialogMode.value = 'edit'
   editingDiscount.value = item
   dialog.value = true

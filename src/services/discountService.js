@@ -17,7 +17,6 @@ export const discountService = {
 
   update(id, payload) {
     const { _id, ...data } = payload
-
     return crudcrud.put(`/${RESOURCE}/${id}`, data)
   },
 
